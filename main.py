@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from openai_api import oa_Client, oa_assistant_id
+from openai_api import OpenAI_API
 
 load_dotenv()  # load .env file
 
@@ -59,9 +59,6 @@ async def validate_address(request: Request):
     try:
         thread_id = request.thread_id
         address = request.address.strip()
-        
-        if not thread_id or thread_id not in thread_states:
-            raise HTTPException(status_code=400, detail="Invalid or missing thread_id")
         
         # Check if address looks like a zip code (5 digits) or full address
         if address.replace("-", "").isdigit() and len(address.replace("-", "")) in [5, 9]:
@@ -138,26 +135,26 @@ async def chat_with_assistant(request: Request):
 
 
         # Add the user's message to the thread
-        oa_Client.responses.threads.messages.create(
+        OpenAI_API.responses.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=user_message
         )
         
         # Create a run with the assistant
-        run = oa_Client.responses.threads.runs.create(
+        run = OpenAI_API.responses.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=oa_assistant_id
+            assistant_id=OpenAI_API.assistant_id
         )
         
         # Wait for the run to complete
         while run.status in ['queued', 'in_progress', 'cancelling']:
             time.sleep(1)
-            run = oa_Client.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+            run = OpenAI_API.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
         if run.status == 'completed':
             # Get the assistant's response
-            messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
+            messages = OpenAI_API.responses.threads.messages.list(thread_id=thread_id)
             assistant_response = messages.data[0].content[0].text.value
             
             return {
@@ -177,7 +174,7 @@ async def get_conversation_history(thread_id: str):
     """Get the latest conversation history from a thread."""
     try:
         # Get all messages from the thread
-        messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
+        messages = OpenAI_API.responses.threads.messages.list(thread_id=thread_id)
 
         conversation_history = []
         for message in reversed(messages.data):  # Reverse to get chronological order
