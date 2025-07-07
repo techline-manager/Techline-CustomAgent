@@ -32,26 +32,10 @@ import threading
 thread_states = {}
 thread_states_lock = threading.Lock()
 
-class ChatRequest(BaseModel):
-    message: str
-    thread_id: Optional[str] = None
-
-class AddressValidationRequest(BaseModel):
-    address: str
-    thread_id: Optional[str] = None
 
 # Retrieve the assistant (but don't create a global thread)
 bot_agent = client.responses.assistants.retrieve(assistant_id=assistant_id)
 
-
-@app.get("/")
-async def root():
-    return {"message": "Techline Custom Agent API", "status": "active"}
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for GCP load balancer."""
-    return {"status": "healthy", "timestamp": time.time()}
 
 @app.post("/start_conversation")
 async def start_conversation():
@@ -95,7 +79,7 @@ This helps us determine if we service your area and provide accurate pricing."""
         raise HTTPException(status_code=500, detail=f"Error starting conversation: {str(e)}")
 
 @app.post("/validate_address")
-async def validate_address(request: AddressValidationRequest):
+async def validate_address(request: Request):
     """Validate the user's address before allowing them to continue."""
     try:
         thread_id = request.thread_id
@@ -171,7 +155,7 @@ async def validate_address(request: AddressValidationRequest):
         raise HTTPException(status_code=500, detail=f"Error validating address: {str(e)}")
 
 @app.post("/chat")
-async def chat_with_assistant(request: ChatRequest):
+async def chat_with_assistant(request: Request):
     """Send a message to the assistant and get a response (only after address validation)."""
     try:
         thread_id = request.thread_id
@@ -229,7 +213,7 @@ async def get_conversation_history(thread_id: str):
             raise HTTPException(status_code=404, detail="Thread not found")
         
         # Get all messages from the thread
-        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        messages = client.responses.threads.messages.list(thread_id=thread_id)
         
         conversation_history = []
         for message in reversed(messages.data):  # Reverse to get chronological order
