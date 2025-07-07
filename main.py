@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 
-from gcp_api import GoogleMapsAPI
+from googlemaps_api import GoogleMapsAPI
 
 load_dotenv()  # load .env file
 
