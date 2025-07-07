@@ -4,7 +4,12 @@ import json
 from datetime import datetime
 import time
 
-
+# Configuration
+API_BASE_URL = st.sidebar.text_input(
+    "API Base URL", 
+    value="http://localhost:8000",
+    help="Enter your API base URL (local or GCP Cloud Run URL)"
+)
 
 
 def make_api_request(endpoint, method="GET", data=None):
@@ -50,7 +55,7 @@ def start_conversation():
     else:
         st.error(f"❌ Failed to start conversation: {response.get('error', 'Unknown error')}")
 
-def validate_address(address):1
+def validate_address(address):
     """Validate user's address."""
     if not st.session_state.thread_id:
         st.error("❌ No active conversation. Please start a conversation first.")
@@ -150,6 +155,7 @@ def send_chat_message(message):
         # Remove the user message if the request failed
         st.session_state.messages.pop()
         st.rerun()
+
 
 def get_conversation_history():
     """Fetch and display full conversation history."""

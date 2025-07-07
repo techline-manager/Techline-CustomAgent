@@ -10,13 +10,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Configuration
-API_BASE_URL = st.sidebar.text_input(
-    "API Base URL", 
-    value="http://localhost:8000",
-    help="Enter your API base URL (local or GCP Cloud Run URL)"
-)
-
 st.title("🏠 Techline Cleaning Services")
 st.subheader("Customer Service Chat Interface")
 
