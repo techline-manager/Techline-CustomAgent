@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from openai_api import OpenAI_API
 
+from googlemaps_api import GoogleMapsAPI
+
 load_dotenv()  # load .env file
 
 # Get port from environment (GCP Cloud Run uses PORT env var)
@@ -25,7 +27,7 @@ async def start_conversation():
     """Start a new conversation by asking for the user's address/zip code."""
     try:
         # Create a new thread
-        thread = oa_Client.responses.threads.create()
+        thread = OpenAI_API.responses.threads.create()
         thread_id = thread.id
         
         # Ask for address/zip code
@@ -38,7 +40,7 @@ Before we can assist you with your cleaning needs, please provide either:
 This helps us determine if we service your area and provide accurate pricing."""
         
         # Add the initial message to the thread
-        oa_Client.responses.threads.messages.create(
+        OpenAI_API.responses.threads.messages.create(
             thread_id=thread_id,
             role="assistant",
             content=initial_message
@@ -63,21 +65,18 @@ async def validate_address(request: Request):
         # Check if address looks like a zip code (5 digits) or full address
         if address.replace("-", "").isdigit() and len(address.replace("-", "")) in [5, 9]:
             # Validate zip code
-            is_valid, location_data = maps_api.validate_zip_code(address)
+            is_valid, location_data = GoogleMapsAPI.validate_zip_code(address)
             validation_type = "zip_code"
         else:
             # Validate full address
-            is_valid, location_data = maps_api.validate_address(address)
+            is_valid, location_data = GoogleMapsAPI.validate_address(address)
             validation_type = "address"
         
         if is_valid:
             # Update thread state (thread-safe)
-            with thread_states_lock:
-                thread_states[thread_id]["address_validated"] = True
-                thread_states[thread_id]["address_data"] = location_data
-            
+
             # Add user's address to the thread
-            client.responses.threads.messages.create(
+            OpenAI_API.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
                 content=address
@@ -93,8 +92,8 @@ async def validate_address(request: Request):
                 confirmation_msg += ". How can I help you with your cleaning needs today?"
             else:
                 confirmation_msg = f"Perfect! I've confirmed your address: {location_data['formatted_address']}. How can I help you with your cleaning needs today?"
-            
-            client.responses.threads.messages.create(
+
+            OpenAI_API.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=confirmation_msg
@@ -110,7 +109,7 @@ async def validate_address(request: Request):
         else:
             error_msg = "I'm sorry, but I couldn't validate that address or zip code. Please double-check and try again, or provide a different format (full address or 5-digit zip code)."
             
-            client.responses.threads.messages.create(
+            OpenAI_API.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=error_msg
