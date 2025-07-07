@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from openai_api import OpenAI_API
+from openai_api import oa_Client
 
 from googlemaps_api import GoogleMapsAPI
 
@@ -30,7 +30,7 @@ async def start_conversation():
     """Start a new conversation by asking for the user's address/zip code."""
     try:
         # Create a new thread
-        thread = OpenAI_API.responses.threads.create()
+        thread = oa_Client.threads.create()
         thread_id = thread.id
         
         # Ask for address/zip code
@@ -43,7 +43,7 @@ Before we can assist you with your cleaning needs, please provide either:
 This helps us determine if we service your area and provide accurate pricing."""
         
         # Add the initial message to the thread
-        OpenAI_API.responses.threads.messages.create(
+        oa_Client.responses.threads.messages.create(
             thread_id=thread_id,
             role="assistant",
             content=initial_message
@@ -79,7 +79,7 @@ async def validate_address(request: Request):
             # Update thread state (thread-safe)
 
             # Add user's address to the thread
-            OpenAI_API.responses.threads.messages.create(
+            oa_Client.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
                 content=address
@@ -96,7 +96,7 @@ async def validate_address(request: Request):
             else:
                 confirmation_msg = f"Perfect! I've confirmed your address: {location_data['formatted_address']}. How can I help you with your cleaning needs today?"
 
-            OpenAI_API.responses.threads.messages.create(
+            oa_Client.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=confirmation_msg
@@ -112,7 +112,7 @@ async def validate_address(request: Request):
         else:
             error_msg = "I'm sorry, but I couldn't validate that address or zip code. Please double-check and try again, or provide a different format (full address or 5-digit zip code)."
             
-            OpenAI_API.responses.threads.messages.create(
+            oa_Client.responses.threads.messages.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=error_msg
@@ -136,26 +136,26 @@ async def chat_with_assistant(request: Request):
         user_message = request.message
 
         # Add the user's message to the thread
-        OpenAI_API.responses.threads.messages.create(
+        oa_Client.responses.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=user_message
         )
         
         # Create a run with the assistant
-        run = OpenAI_API.responses.threads.runs.create(
+        run = oa_Client.responses.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=OpenAI_API.assistant_id
+            assistant_id=oa_Client.assistant_id
         )
         
         # Wait for the run to complete
         while run.status in ['queued', 'in_progress', 'cancelling']:
             time.sleep(1)
-            run = OpenAI_API.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+            run = oa_Client.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
         if run.status == 'completed':
             # Get the assistant's response
-            messages = OpenAI_API.responses.threads.messages.list(thread_id=thread_id)
+            messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
             assistant_response = messages.data[0].content[0].text.value
             
             return {
@@ -175,7 +175,7 @@ async def get_conversation_history(thread_id: str):
     """Get the latest conversation history from a thread."""
     try:
         # Get all messages from the thread
-        messages = OpenAI_API.responses.threads.messages.list(thread_id=thread_id)
+        messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
 
         conversation_history = []
         for message in reversed(messages.data):  # Reverse to get chronological order

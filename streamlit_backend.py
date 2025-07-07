@@ -11,7 +11,6 @@ API_BASE_URL = st.sidebar.text_input(
     help="Enter your API base URL (local or GCP Cloud Run URL)"
 )
 
-
 def make_api_request(endpoint, method="GET", data=None):
     """Make API request with error handling."""
     try:
@@ -155,7 +154,6 @@ def send_chat_message(message):
         # Remove the user message if the request failed
         st.session_state.messages.pop()
         st.rerun()
-
 
 def get_conversation_history():
     """Fetch and display full conversation history."""
