@@ -1,6 +1,6 @@
 import streamlit as st
-import streamlit_backend as st_app
-
+import streamlit_backend as st_be
+import json
 
 # Configure the page
 st.set_page_config(
@@ -37,10 +37,10 @@ if "conversation_history" not in st.session_state:
 st.sidebar.header("🎛️ Controls")
 
 if st.sidebar.button("🚀 Start New Conversation", type="primary"):
-    start_conversation()
+    st_be.start_conversation()
 
 if st.sidebar.button("📋 Get Conversation Data"):
-    history = get_conversation_history()
+    history = st_be.get_conversation_history()
     if history:
         st.sidebar.success(f"📊 **Conversation Stats:**")
         st.sidebar.write(f"- Total messages: {history['total_messages']}")
@@ -49,7 +49,7 @@ if st.sidebar.button("📋 Get Conversation Data"):
 # API Status check
 with st.sidebar.expander("🔍 API Status"):
     if st.button("Check API Health"):
-        success, response = make_api_request("health")
+        success, response = st_be.make_api_request("health")
         if success:
             st.success("✅ API is healthy")
             st.json(response)
@@ -96,7 +96,7 @@ else:
         with col1:
             if st.button("✅ Validate Address", type="primary"):
                 if address_input.strip():
-                    validate_address(address_input.strip())
+                    st_be.validate_address(address_input.strip())
                 else:
                     st.error("❌ Please enter an address or zip code.")
     else:
@@ -113,7 +113,7 @@ else:
         with col1:
             if st.button("📤 Send", type="primary"):
                 if chat_input.strip():
-                    send_chat_message(chat_input.strip())
+                    st_be.send_chat_message(chat_input.strip())
                 else:
                     st.error("❌ Please enter a message.")
 
