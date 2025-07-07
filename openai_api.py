@@ -5,9 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()  # load .env file
 
-
-
-
 oa_Client = OpenAI()
 
 oa_assistant_id = "asst_3JAJtWdX1E9puuIy34vlUDPq"

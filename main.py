@@ -20,8 +20,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
-
 @app.post("/start_conversation")
 async def start_conversation():
     """Start a new conversation by asking for the user's address/zip code."""
@@ -131,7 +129,6 @@ async def chat_with_assistant(request: Request):
     try:
         thread_id = request.thread_id
         user_message = request.message
-
 
         # Add the user's message to the thread
         OpenAI_API.responses.threads.messages.create(
