@@ -3,12 +3,9 @@ import time
 import json
 from typing import Dict, Optional
 
-from openai import OpenAI
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from pydantic import BaseModel
-
-from googlemaps_api import GoogleMapsAPI
+from openai_api import oa_Client, oa_assistant_id
 
 load_dotenv()  # load .env file
 
@@ -20,21 +17,7 @@ app = FastAPI(
     description="AI-powered cleaning service assistant with address validation",
     version="1.0.0"
 )
-client = OpenAI()
-maps_api = GoogleMapsAPI()
 
-assistant_id = "asst_3JAJtWdX1E9puuIy34vlUDPq"
-model = "gpt-4-omini"
-
-# For production, you'd want to use a proper database or Redis
-# For now, using in-memory storage with thread safety
-import threading
-thread_states = {}
-thread_states_lock = threading.Lock()
-
-
-# Retrieve the assistant (but don't create a global thread)
-bot_agent = client.responses.assistants.retrieve(assistant_id=assistant_id)
 
 
 @app.post("/start_conversation")
@@ -42,16 +25,8 @@ async def start_conversation():
     """Start a new conversation by asking for the user's address/zip code."""
     try:
         # Create a new thread
-        thread = client.responses.threads.create()
+        thread = oa_Client.responses.threads.create()
         thread_id = thread.id
-        
-        # Initialize thread state (thread-safe)
-        with thread_states_lock:
-            thread_states[thread_id] = {
-                "address_validated": False,
-                "address_data": None,
-                "conversation_started": True
-            }
         
         # Ask for address/zip code
         initial_message = """Hello! Welcome to Techline cleaning services.
@@ -63,7 +38,7 @@ Before we can assist you with your cleaning needs, please provide either:
 This helps us determine if we service your area and provide accurate pricing."""
         
         # Add the initial message to the thread
-        client.responses.threads.messages.create(
+        oa_Client.responses.threads.messages.create(
             thread_id=thread_id,
             role="assistant",
             content=initial_message
@@ -160,37 +135,29 @@ async def chat_with_assistant(request: Request):
     try:
         thread_id = request.thread_id
         user_message = request.message
-        
-        if not thread_id or thread_id not in thread_states:
-            raise HTTPException(status_code=400, detail="Invalid thread_id. Please start a new conversation.")
-        
-        if not thread_states[thread_id]["address_validated"]:
-            raise HTTPException(status_code=400, detail="Address must be validated before chatting. Please use /validate_address endpoint first.")
-        
-        if not user_message:
-            raise HTTPException(status_code=400, detail="Message cannot be empty.")
-        
+
+
         # Add the user's message to the thread
-        client.responses.threads.messages.create(
+        oa_Client.responses.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=user_message
         )
         
         # Create a run with the assistant
-        run = client.responses.threads.runs.create(
+        run = oa_Client.responses.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=assistant_id
+            assistant_id=oa_assistant_id
         )
         
         # Wait for the run to complete
         while run.status in ['queued', 'in_progress', 'cancelling']:
             time.sleep(1)
-            run = client.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-        
+            run = oa_Client.responses.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+
         if run.status == 'completed':
             # Get the assistant's response
-            messages = client.responses.threads.messages.list(thread_id=thread_id)
+            messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
             assistant_response = messages.data[0].content[0].text.value
             
             return {
@@ -209,12 +176,9 @@ async def chat_with_assistant(request: Request):
 async def get_conversation_history(thread_id: str):
     """Get the latest conversation history from a thread."""
     try:
-        if thread_id not in thread_states:
-            raise HTTPException(status_code=404, detail="Thread not found")
-        
         # Get all messages from the thread
-        messages = client.responses.threads.messages.list(thread_id=thread_id)
-        
+        messages = oa_Client.responses.threads.messages.list(thread_id=thread_id)
+
         conversation_history = []
         for message in reversed(messages.data):  # Reverse to get chronological order
             conversation_history.append({
@@ -225,7 +189,6 @@ async def get_conversation_history(thread_id: str):
         
         return {
             "thread_id": thread_id,
-            "thread_state": thread_states[thread_id],
             "conversation_history": conversation_history,
             "total_messages": len(conversation_history)
         }
@@ -236,12 +199,9 @@ async def get_conversation_history(thread_id: str):
 @app.get("/thread_status/{thread_id}")
 async def get_thread_status(thread_id: str):
     """Get the current status of a thread."""
-    if thread_id not in thread_states:
-        raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     return {
         "thread_id": thread_id,
-        "status": thread_states[thread_id]
     }
 
 if __name__ == "__main__":
