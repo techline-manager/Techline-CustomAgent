@@ -1,0 +1,29 @@
+[global]
+
+# If you share your app publicly, this sets it to wide mode by default
+dataFrameSerialization = "legacy"
+
+[server]
+# Port where the app is served
+port = 8501
+
+# Address where the app is served
+address = "0.0.0.0"
+
+# Whether to enable CORS
+enableCORS = true
+
+# Whether to enable XSRF protection
+enableXsrfProtection = true
+
+[browser]
+# Whether to automatically open the browser when starting the app
+gatherUsageStats = false
+
+[theme]
+# Set the app theme
+primaryColor = "#FF6B6B"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"

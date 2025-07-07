@@ -1,0 +1,33 @@
+runtime: python311
+
+# Environment variables (use Secret Manager for production)
+env_variables:
+  # Don't put actual API keys here - use Secret Manager instead
+  PYTHONPATH: /srv
+
+# Automatic scaling configuration
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# Resource allocation
+resources:
+  cpu: 1
+  memory_gb: 1
+
+# Health check
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300
+
+liveness_check:
+  path: "/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 4
+  success_threshold: 2
