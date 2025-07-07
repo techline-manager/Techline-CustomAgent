@@ -20,6 +20,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
+@app.get("/")
+async def root():
+    """Root endpoint to check if the API is running."""
+    return {"message": "Techline Custom Agent API is running!"}
+
 @app.post("/start_conversation")
 async def start_conversation():
     """Start a new conversation by asking for the user's address/zip code."""
