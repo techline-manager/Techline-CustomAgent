@@ -5,8 +5,8 @@ import streamlit_app as streamlit_app
 from typing import Dict, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from backend.open_ai_agent import AgentWrapper, agent, oa_client
-from backend.googlemaps_api import GoogleMapsAPI
+from open_ai_agent import AgentWrapper, agent, oa_client
+from googlemaps_api import GoogleMapsAPI
 from streamlit_app import render_chat_interface
 
 
@@ -68,6 +68,7 @@ async def chat_with_assistant(request: Request):
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error in chat: {str(e)}")
+
 
 @app.get("/fetch_response")
 async def fetch_response(thread_id: str):
