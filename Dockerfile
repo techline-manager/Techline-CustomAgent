@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 8080
 
 # Run Streamlit app (use $PORT)
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=$PORT", "--server.address=0.0.0.0"]
+CMD streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0
