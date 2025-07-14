@@ -1,44 +1,36 @@
 import os
 from fastapi import FastAPI, HTTPException
 
-from dotenv import load_dotenv
 
 from openai import OpenAI
-from agents import Agent, Runner
+import openai as openai_api
 
+from dotenv import load_dotenv
 
 load_dotenv()  # load .env file
 
-api_key = os.getenv("OPENAI_API_KEY")
-oa_client = OpenAI(api_key=api_key)
 oa_model = "gpt-4o-mini-2024-07-18"  # Specify the model to use
-
-prompt_instructions = "You're a helpful assistant for a cleaning service. Answer questions about cleaning services, schedules, and pricing." \
-"\n" \
-                      "Your goal is to make the client 4 questions before you can help them with other requests" \
-                      "\n" \
-                      "Question 1: What is the address for the cleaning service?" \
-                      "\n" \
-                      "Question 2: What type of cleaning service do you need? (e.g., residential, commercial, deep clean)" \
-                      "\n" \
-                      "Question 3: How many rooms or areas need cleaning?" \
-                      "\n" \
-                      
-agent = Agent(name="Cleaning Bot Assistant", instructions="You are a helpful assistant", model=oa_model)
-
-#wrap this in a class
-class AgentWrapper:
-    def __init__(self, agent):
-        self.agent = agent
-
-    async def make_hardcoded_question(thread_id, message):
-            new_input = [{"role": "user", "content": prompt_instructions}]
-            result = await Runner.run(agent,new_input)
-            return result
-
-
-    async def answer_questions(thread_id , message: str):
-            new_input = [{"role": "assistant", "content": message}]
-            result = await Runner.run(agent, new_input)
-            return result.final_output
+ASSISTANT_ID = "asst_3JAJtWdX1E9puuTy34v1UDPq"
+                
+def get_openai_response(messages):
+    """
+    Send the conversation to the Assistant API and get the assistant's reply.
+    """
+    thread = openai_api.responses.create(messages=messages)
+    run = openai_api.responses.create(thread_id=thread.id, assistant_id=ASSISTANT_ID)
     
+    # Wait until run completes (blocking)
+    import time
+    while True:
+        run_status = openai_api.responses.retrieve(thread_id=thread.id, run_id=run.id)
+        if run_status.status in ["completed", "failed"]:
+            break
+        time.sleep(0.5)
+    
+    if run_status.status == "completed":
+        messages_out = openai_api.responses.list(thread_id=thread.id)
+        # Last message should be the assistant's
+        for m in reversed(messages_out.data):
+            if m.role == "assistant":
+                return m.content[0].text.value
+    return "[No reply]"

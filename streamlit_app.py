@@ -4,6 +4,13 @@ import json
 from datetime import datetime
 import time
 
+import openai
+from open_ai_agent import get_openai_response
+
+
+import os
+api_key = os.environ.get("OPENAI_API_KEY")
+
 # Initialize session state
 if "conversation_started" not in st.session_state:
     st.session_state.conversation_started = False
@@ -27,14 +34,6 @@ API_BASE_URL = st.sidebar.text_input(
     help="Enter your API base URL (local or GCP Cloud Run URL)"
 )
 
-assistant_prompts = [
-    "Hi! Let's get your instant quote. What address will be getting cleaned?",
-    "We're having trouble locating that address. Retry?",
-    "We're not in your area yet, but HeyMaid is growing. Would you like to leave your email?",
-    "Please tell how many rooms, bathrooms and or/area size you need to be cleaned."
-]
-
-
 def make_api_request(endpoint, method, data=None):
     """Make API request with error handling."""
     try:
@@ -55,6 +54,8 @@ def make_api_request(endpoint, method, data=None):
         return False, {"error": "Request timed out. Please try again."}
     except Exception as e:
         return False, {"error": f"Unexpected error: {str(e)}"}
+
+
 
 def create_initial_page():
     st.set_page_config(
@@ -92,32 +93,68 @@ def simulate_agent_typing(message, delay=0.05):
         time.sleep(delay)
     return typed
 
-
 def chat_interface():
     if "step_index" not in st.session_state:
         st.session_state.step_index = 0
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Render existing chat messages
+    current_step = st.session_state.step_index
+
+    # 1. Handle user input FIRST
+    user_input = st.chat_input("Your reply:", key=f"user_input_{current_step}")
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        st.session_state.step_index += 1
+        st.rerun()  # Immediately rerun to show update
+
+    # 2. Render existing messages
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    current_step = st.session_state.step_index
-
-    # Assistant prompts user at the current step
+    # 3. Assistant prompts user if needed
     if current_step < len(assistant_prompts):
-        if len(st.session_state.messages) == 0 or st.session_state.messages[-1]["role"] != "assistant":
+        if (
+            len(st.session_state.messages) == 0
+            or st.session_state.messages[-1]["role"] != "assistant"
+        ):
             with st.chat_message("assistant"):
                 st.markdown(assistant_prompts[current_step])
-                st.session_state.messages.append({"role": "assistant", "content": assistant_prompts[current_step]})
-    
-        # Wait for user input
-        user_input = st.chat_input("Your reply:", key=f"user_input_{current_step}")
-        if user_input:
-            st.session_state.messages.append({"role": "user", "content": user_input})
-            st.session_state.step_index += 1
+            st.session_state.messages.append(
+                {"role": "assistant", "content": assistant_prompts[current_step]}
+            )
+            st.rerun()  # Immediately rerun to show update
+
+def chat_interface_test_realbot():
+    if "messages" not in st.session_state:
+        # First turn: get assistant's first message
+        st.session_state.messages = []
+        assistant_msg = get_openai_response([])
+        st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
+
+    # Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # User input
+    user_input = st.chat_input("Your reply:")
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        # Rebuild OpenAI format:
+        openai_msgs = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        assistant_msg = get_openai_response(openai_msgs)
+        st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
+        st.rerun()
+
+def chat_test_api_key():
+    #Write truncated api key
+    if api_key:
+        truncated_key = api_key[:4] + "..." + api_key[-4:]
+        st.sidebar.markdown(f"**API Key:** `{truncated_key}`")
+    else:
+        st.sidebar.error("API Key not set. Please set it in your environment variables.")
 
 def create_footer():
     """Create the footer with additional information."""
@@ -134,6 +171,6 @@ def create_footer():
 if __name__ == "__main__":
     counter = 0
     create_initial_page()
-    chat_interface()
+    chat_test_api_key()
     create_sidebar()
     create_footer()
